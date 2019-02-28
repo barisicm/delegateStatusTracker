@@ -5,27 +5,29 @@ const $ = require('cheerio');
 
 const url = 'https://persona-exp.geops.net/delegate-monitor';
 let config = readConfigFile('config.json');
+let crashedDelegates = "";
+
 
 main();
 
-function hasAdminBeenContacted(config, delegate){
+function hasAdminBeenContacted(config, messageText){
     if(config.whenWasAdminContacted != null){
-        shouldAdminBeContacted(config, delegate)
+        shouldAdminBeContacted(config, delegate);
     }
     else {
         config.whenWasAdminContacted = new Date().toJSON();
-        sendMessage(delegate);
+        sendMessage(messageText);
         writeConfigFile('config.json', config);
     }
 }
-function shouldAdminBeContacted(config, delegate) {
+function shouldAdminBeContacted(config, messageText) {
     let oldTime = new Date(Date.parse(config.whenWasAdminContacted));
     let newTime = new Date();
 
     if((newTime.getTime() - oldTime.getTime()) > 86400000)
     {
         config.whenWasAdminContacted = newTime;
-        sendMessage(delegate);
+        sendMessage(messageText);
         writeConfigFile('config.json', config);
     }
 }
@@ -57,27 +59,12 @@ function main(){
         $('.table-component__table__body > tr ', html)
         .each(function() {
             var delegate = $(this).find("a > span").first().text();
-            switch (delegate)  {
-                case "persona_power": 
+
+            if(shouldDelegateBeEvaluated(delegate)){
+                crashedDelegates += delegate + "; ";
                 if(isDelegateDown(getStatusColor(this))){
-                    hasAdminBeenContacted(config, delegate);
+                    hasAdminBeenContacted(config, crashedDelegates);
                 }
-                break;
-                case "crna_luca": 
-                if(isDelegateDown(getStatusColor(this))){
-                    hasAdminBeenContacted(config, delegate);
-                }
-                break;
-                case "biggie_smalls": 
-                if(isDelegateDown(getStatusColor(this))){
-                    hasAdminBeenContacted(config, delegate);
-                }
-                break;
-                case "von_kamata": 
-                if(isDelegateDown(getStatusColor(this))){
-                    hasAdminBeenContacted(config, delegate);
-                }
-                break;
             }
             
           });
@@ -85,6 +72,13 @@ function main(){
     })
     .catch(function(err) {
     });
+}
+
+function shouldDelegateBeEvaluated(delegate){
+    //make iterative over config delegates object
+    if(delegate == "persona_power"|| delegate == "crna_luca" || delegate == "biggie_smalls" || delegate == "von_kamata"){
+        return true;
+    }
 }
 
 function isDelegateDown(statusColor){
